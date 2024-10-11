@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1088241051173",
+    "project_id": "finalreactnative-6e7bc",
+    "storage_bucket": "finalreactnative-6e7bc.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1088241051173:android:1771386b1fe9c19c4b01cc",
+        "android_client_info": {
+          "package_name": "com.videoapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBkjZXjIqs9IqGOu3y4gC8_ObliOQ89_WQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
