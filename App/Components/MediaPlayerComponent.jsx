@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, Button, PermissionsAndroid, Platform } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { VESDK, VideoFormat, VideoCodec } from 'react-native-videoeditorsdk';
+import { VESDK } from 'react-native-videoeditorsdk';
 import RNFS from 'react-native-fs';
-import CameraRoll from '@react-native-camera-roll/camera-roll';
 import BannerAdComponent from './BannerAdComponent';
 
 const MediaPlayerComponent = () => {
     const [videoUri, setVideoUri] = useState(null);
 
-    // Request storage permission for Android
     const requestStoragePermission = async () => {
         if (Platform.OS === 'android') {
             try {
@@ -29,13 +27,11 @@ const MediaPlayerComponent = () => {
                 return false;
             }
         }
-        return true; // No need for permission on iOS
+        return true;
     };
 
-    // Function to generate a valid filename
     const getValidFilename = async () => {
         let filePath = '';
-
         if (Platform.OS === 'android') {
             const granted = await PermissionsAndroid.request(
                 PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
@@ -47,32 +43,27 @@ const MediaPlayerComponent = () => {
                     buttonPositive: 'OK',
                 }
             );
-
             if (granted === PermissionsAndroid.RESULTS.GRANTED) {
                 filePath = `${RNFS.ExternalStorageDirectoryPath}/Movies/video_${Date.now()}.mp4`;
             } else {
                 console.error('Storage permission denied');
-                return null; // Handle the case where permission is denied
+                return null;
             }
         } else if (Platform.OS === 'ios') {
             filePath = `${RNFS.DocumentDirectoryPath}/video_${Date.now()}.mp4`;
         }
-
         return filePath;
     };
 
-    // Select video from gallery
     const selectVideo = async () => {
         const hasPermission = await requestStoragePermission();
         if (!hasPermission) {
             return;
         }
-
         const options = {
             mediaType: 'video',
             quality: 1,
         };
-
         launchImageLibrary(options, (response) => {
             if (response.didCancel) {
                 console.log('User cancelled image picker');
@@ -82,18 +73,28 @@ const MediaPlayerComponent = () => {
                 const uri = response.assets[0].uri;
                 setVideoUri(uri);
                 console.log('Video fully imported, calling the function...');
-                onVideoImported(uri); // Call your function here once videoUri is set
+                onVideoImported(uri);
             }
         });
     };
 
-    // Function to be called after video is completely imported and videoUri is set
     const onVideoImported = async (importedVideoUri) => {
         try {
             console.log('Function called with video URI:', importedVideoUri);
 
             const configuration = {
+                transform: {
+                    items: [
+                        { width: 1, height: 1 },
+                        { width: 19, height: 9, name: "Landscape" },
+                    ],
+                    allowFreeCrop: true,
+                    showResetButton: true,
+                },
                 audio: {
+                    allowAudio: true,
+                    showAudioPicker: true,
+                    allowMultipleAudio: true,
                     categories: [
                         {
                             identifier: "custom",
@@ -101,39 +102,29 @@ const MediaPlayerComponent = () => {
                             items: [
                                 {
                                     identifier: "elsewhere",
-                                    audioURI: require("../../assets/vesdk/elsewhere.mp3")
-                                }
-                            ]
-                        }
-                    ]
+                                    audioURI: require("../../assets/vesdk/elsewhere.mp3"), // Ensure this path is correct
+                                },
+                            ],
+                        },
+                    ],
                 },
-                export: {
-                    filename: await getValidFilename(), // Valid file path generated dynamically
-                    video: {
-                        format: VideoFormat.MP4,
-                        codec: VideoCodec.H264,
-                        bitRate: 3840,
-                        quality: 0.5, // For H.264, this will not apply
-                    },
-                },
+                forceCrop: true,
             };
 
+            console.log('Opening video editor with configuration:', configuration);
             const result = await VESDK.openEditor(importedVideoUri, configuration);
+            console.log('Editor result:', result);
 
             if (result != null) {
-                // The user exported a new video successfully
                 console.log('Exported video located at:', result.video);
-
-                // Save the exported video to the camera roll
-                await CameraRoll.save(result.video, { type: 'video' });
-
-                // Delete the temporary export file after saving
-                await RNFS.unlink(result.video);
+                const destinationPath = await getValidFilename();
+                await RNFS.moveFile(result.video, destinationPath);
+                console.log('Video saved to:', destinationPath);
             } else {
                 console.log('The user tapped on the cancel button within the editor.');
             }
         } catch (error) {
-            console.error('Error importing video:', error);
+            console.error('Error during video editing:', error);
         }
     };
 
